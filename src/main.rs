@@ -24,19 +24,37 @@ enum Command{
     Get(String),
     Exit,
 }
-fn parse_command(input: &str) -> Option<Command>{
-    let parts = input.split_whitespace().collect::<Vec<&str>>();
+fn parse_command(input: &str) -> Result<Command, String> {
+    let parts: Vec<&str> = input.split_whitespace().collect();
 
     if parts.is_empty() {
-        return None;
+        return Err("Empty command".into());
     }
 
     match parts[0].to_lowercase().as_str() {
-        "set" if parts.len() == 3 => Some(Command::Set(parts[1].to_string(), parts[2].to_string())),
-        "get" if parts.len() == 2 => Some(Command::Get(parts[1].to_string())),
-        "exit" if parts.len() == 1 => Some(Command::Exit),
-        _ => None,  
-    }   
+        "set" => {
+            if parts.len() == 3 {
+                Ok(Command::Set(parts[1].into(), parts[2].into()))
+            } else {
+                Err("Invalid 'set' command. Use: set <key> <value>".into())
+            }
+        }
+        "get" => {
+            if parts.len() == 2 {
+                Ok(Command::Get(parts[1].into()))
+            } else {
+                Err("Invalid 'get' command. Use: get <key>".into())
+            }
+        }
+        "exit" => {
+            if parts.len() == 1 {
+                Ok(Command::Exit)
+            } else {
+                Err("Invalid 'exit' command. Use: exit".into())
+            }
+        }
+        _ => Err("Unknown command".into()),
+    }
 }
 fn main() {
    
@@ -55,21 +73,21 @@ fn main() {
         let mut command = String::new();
         io::stdin().read_line(&mut command).expect("Failed to read line");
         match parse_command(&command){
-            Some(Command::Set(key, value)) => {
+            Ok(Command::Set(key, value)) => {
                 db.set(key, value);
                 println!("Key-value pair set successfully.");
             },
-            Some(Command::Get(key)) => {
+            Ok(Command::Get(key)) => {
                 match db.get(&key){
                     Some(val) => println!("Value for '{}': {}", key, val),
                     None => println!("Key '{}' not found", key),
                 }
             },
-            Some(Command::Exit) => {
+            Ok(Command::Exit) => {
                 println!("Exiting...");
                 break;
             },
-            None => println!("Invalid command. Please try again."),
+            Err(e) => println!("Error: {}", e),
         }
 
 
