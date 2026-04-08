@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::io;
+use serde::{Serialize, Deserialize};
 
+[derive(Serialize, Deserialize)]
 struct SqueezeStore{
         store: HashMap<String, String>,
 }
