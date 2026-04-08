@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 use std::io;
 use serde::{Serialize, Deserialize};
+use std::fs;
+use std::path::Path;
 
-[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct SqueezeStore{
         store: HashMap<String, String>,
 }
@@ -19,6 +21,24 @@ impl SqueezeStore {
         fn set(&mut self, key: String, value: String) {
             self.store.insert(key, value);
         }
+        fn load_from_file(path: &Path) -> io::Result<Self> {
+            if !path.exists(){
+                return Ok(SqueezeStore::new());
+            }
+            let contents = fs::read_to_string(path)?;
+            let loaded:SqueezeStore= serde_json::from_str(&contents)
+                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+            
+            Ok(loaded)
+
+        }
+
+        fn save_to_file(&self, path: &Path) -> io::Result<()> {
+            let contents = serde_json::to_string(&self)
+                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+            fs::write(path, contents)
+        }
+
 }
 
 enum Command{
@@ -60,15 +80,9 @@ fn parse_command(input: &str) -> Result<Command, String> {
 }
 fn main() {
    
-    let mut db = SqueezeStore::new();
-    db.set("name".to_string(), "Aadithya".to_string());
-    match db.get("name"){
-        Some(val)=> println!("Value for 'name': {}", val),
-        None => println!("Key 'name' not found"),
-    }
-
+    let mut db = SqueezeStore::load_from_file(Path::new("store.json")).expect("Failed to load store from file");
+  
     println!("welcome to SqueezeStore! A simple in-memory key-value store.");
-
 
     loop{
         println!("Enter a command (set/get/exit):");
@@ -77,7 +91,10 @@ fn main() {
         match parse_command(&command){
             Ok(Command::Set(key, value)) => {
                 db.set(key, value);
-                println!("Key-value pair set successfully.");
+                match db.save_to_file(Path::new("store.json")) {
+                    Ok(()) => println!("Key-value pair set successfully."),
+                    Err(e) => eprintln!("Error saving to file: {}", e),
+                }
             },
             Ok(Command::Get(key)) => {
                 match db.get(&key){
@@ -86,7 +103,10 @@ fn main() {
                 }
             },
             Ok(Command::Exit) => {
-                println!("Exiting...");
+                match db.save_to_file(Path::new("store.json")) {
+                    Ok(()) => println!("Exiting..."),
+                    Err(e) => eprintln!("Error saving to file: {}", e),
+                }
                 break;
             },
             Err(e) => println!("Error: {}", e),
