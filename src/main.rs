@@ -46,38 +46,30 @@ enum Command{
     Get(String),
     Exit,
 }
+
 fn parse_command(input: &str) -> Result<Command, String> {
-    let parts: Vec<&str> = input.split_whitespace().collect();
+    let mut parts = input.splitn(3, ' ');
 
-    if parts.is_empty() {
-        return Err("Empty command".into());
-    }
+    let command = parts.next().ok_or("Empty command")?;
 
-    match parts[0].to_lowercase().as_str() {
+    match command.to_lowercase().as_str() {
         "set" => {
-            if parts.len() == 3 {
-                Ok(Command::Set(parts[1].into(), parts[2].into()))
-            } else {
-                Err("Invalid 'set' command. Use: set <key> <value>".into())
-            }
+            let key = parts.next().ok_or("Missing key for 'set'")?;
+            let value = parts.next().ok_or("Missing value for 'set'")?;
+
+            Ok(Command::Set(key.into(), value.into()))
         }
         "get" => {
-            if parts.len() == 2 {
-                Ok(Command::Get(parts[1].into()))
-            } else {
-                Err("Invalid 'get' command. Use: get <key>".into())
-            }
+            let key = parts.next().ok_or("Missing key for 'get'")?;
+
+            Ok(Command::Get(key.into()))
         }
-        "exit" => {
-            if parts.len() == 1 {
-                Ok(Command::Exit)
-            } else {
-                Err("Invalid 'exit' command. Use: exit".into())
-            }
-        }
+        "exit" => Ok(Command::Exit),
+
         _ => Err("Unknown command".into()),
     }
 }
+
 fn main() {
    
     let mut db = SqueezeStore::load_from_file(Path::new("store.json")).expect("Failed to load store from file");
